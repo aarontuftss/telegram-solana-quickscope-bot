@@ -1,4 +1,6 @@
+import asyncio
 import datetime
+import httpx
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solana.rpc.api import Client
@@ -6,6 +8,18 @@ import base64
 import os
 from dotenv import load_dotenv
 from supabase import create_client
+from dotenv import load_dotenv
+from cachetools import TTLCache
+
+# Define the TTL cache (maxsize=100, ttl=3600 seconds = 1 hour)
+cache = TTLCache(maxsize=100, ttl=3600)
+
+load_dotenv()
+
+HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")  # Store your Helius API key in an environment variable
+HELIUS_API_URL = "https://api.helius.xyz/v0/addresses/{address}/transactions/"
+
+
 
 load_dotenv()
 
@@ -15,7 +29,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"  # Replace with "https://api.devnet.solana.com" for testing
-rpc_client = Client(SOLANA_RPC_URL)
 
 def create_wallet(user_id):
     """
@@ -44,6 +57,8 @@ def get_wallet_info(user_id):
     """
     Retrieves wallet info and balance from the database and Solana blockchain.
     """
+    rpc_client = Client(SOLANA_RPC_URL)
+
 
     # Fetch the wallet details from the database
     result = supabase.table("Wallets").select("public_key").eq("user_id", user_id).execute()
@@ -88,75 +103,71 @@ def get_wallet_public_key(user_id):
     if result.data:
         return result.data[0]["public_key"]
     return None
-
-# def fetch_trades(public_key, offset, limit):
-#     """Fetch a paginated list of transactions for the wallet."""
-#     # Placeholder implementation
-#     # Replace with Solana API or relevant data source for fetching transactions
-#     transactions = [
-#         {"tx_id": f"Tx{offset + i + 1}", "amount": 1.23, "date": "2024-12-16"}
-#         for i in range(limit)
-#     ]
-#     total_count = 50  # Replace with actual count from the data source
-#     return transactions, total_count
-
-def fetch_trades(public_key, offset, limit):
-    """
-    Fetch a paginated list of transactions for the wallet.
-
-    Args:
-        public_key (str): The public key of the wallet.
-        offset (int): The starting index for pagination.
-        limit (int): The number of transactions to fetch.
-
-    Returns:
-        list, int: A list of transactions and the total count of transactions.
-    """
+    
+async def fetch_trades(public_key, offset, limit):
     try:
-        # Convert public key string to Pubkey object
-        wallet_pubkey = Pubkey.from_string(public_key)
+
+        # Generate a unique cache key
+        cache_key = f"{public_key}-{offset}-{limit}"
         
-        # Fetch signatures for the wallet address
-        response = rpc_client.get_signatures_for_address(wallet_pubkey, limit=1000)
-        if not response or not response.value:
-            return [], 0  # No transactions found
+        # Check if the result is already cached
+        if cache_key in cache:
+            return cache[cache_key]
 
-        # Extract and paginate transactions
-        all_signatures = response.value  # List of transaction signatures
-        total_count = len(all_signatures)
-        paginated_signatures = all_signatures[offset:offset + limit]
+        url = HELIUS_API_URL.format(address=public_key)
+        params = {"api-key": HELIUS_API_KEY}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params=params)
+            if response.status_code != 200:
+                raise Exception(f"Helius API returned {response.status_code}: {response.text}")
 
-        transactions = []
-        for signature_data in paginated_signatures:
-            # Get transaction details
-            tx_signature = signature_data['signature']
-            tx_response = rpc_client.get_transaction(tx_signature)
-            if not tx_response or not tx_response.value:
-                continue
+            # Parse the response
+            data = response.json()
+            total_count = len(data)
+            paginated_data = data[offset:offset + limit]
 
-            # Extract relevant transaction data
-            tx = tx_response.value['transaction']
-            meta = tx_response.value['meta']
-            
-            # Get the amount of SOL transferred in the transaction
-            pre_balances = meta.get('preBalances', [])
-            post_balances = meta.get('postBalances', [])
-            sol_diff = (pre_balances[0] - post_balances[0]) / 1e9  # Convert lamports to SOL
+            transactions = []
+            for tx in paginated_data:
+                timestamp = tx.get("timestamp")
+                fee = tx.get("fee", 0) / 1e9  # Convert lamports to SOL
+                date = (
+                    datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                    if timestamp
+                    else "Unknown"
+                )
 
-            # Get transaction date (block time)
-            block_time = tx_response.value.get('blockTime')
-            date = datetime.utcfromtimestamp(block_time).strftime('%Y-%m-%d %H:%M:%S') if block_time else "Unknown"
+                # Process native transfers
+                native_transfers = [
+                    {
+                        "from": transfer.get("fromUserAccount", "Unknown"),
+                        "to": transfer.get("toUserAccount", "Unknown"),
+                        "amount": transfer.get("amount", 0) / 1e9  # Convert lamports to SOL
+                    }
+                    for transfer in tx.get("nativeTransfers", [])
+                ]
 
-            # Append transaction details
-            transactions.append({
-                "tx_id": tx_signature,
-                "amount": sol_diff,
-                "date": date
-            })
-        print(transactions)
-        print(total_count)
-        return transactions, total_count
+                # Process token transfers
+                token_transfers = [
+                    {
+                        "token": transfer.get("mint", "Unknown"),
+                        "from": transfer.get("fromUserAccount", "Unknown"),
+                        "to": transfer.get("toUserAccount", "Unknown"),
+                        "amount": transfer.get("tokenAmount", {}).get("amount", 0) /
+                                (10 ** transfer.get("tokenAmount", {}).get("decimals", 0))
+                    }
+                    for transfer in tx.get("tokenTransfers", [])
+                ]
+
+                # Only include native transfers or token transfers, not both
+                transactions.append({
+                    "date": date,
+                    "fee": f"{fee:.9f}",
+                    "native_transfers": native_transfers if native_transfers else None,
+                    "token_transfers": token_transfers if not native_transfers and token_transfers else None,
+                })
+            cache[cache_key] = (transactions, total_count)
+            return transactions, total_count
 
     except Exception as e:
-        print(f"Error fetching transactions: {e}")
+        print(f"Error fetching transactions from Helius: {e}")
         return [], 0

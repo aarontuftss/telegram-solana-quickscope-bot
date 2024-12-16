@@ -6,6 +6,7 @@ async def settings(update, context):
     """
     Displays the Settings menu with dynamic buttons based on the user's current config.
     """
+    context.user_data.clear()
     user_id = update.effective_user.id
 
     # Fetch user configuration

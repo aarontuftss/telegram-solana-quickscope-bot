@@ -1,7 +1,6 @@
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
 from handlers.start_handler import about, buy_coin, help_command, sell_coin, send_sol, start, menu_handler, trades
 from handlers.wallet_handler import wallet_info, add_funds
-from handlers.sol_handler import SEND_SOL_AMOUNT, SEND_SOL_ADDRESS, send_sol_amount, send_sol_address
 from telegram import BotCommand
 
 from handlers.settings_handler import settings, handle_settings_buttons

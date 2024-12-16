@@ -4,27 +4,32 @@ from services.user_config_service import create_user_config
 from handlers.sol_handler import SEND_SOL_AMOUNT
 
 from handlers.settings_handler import settings
+from telegram import BotCommand
 
 
 async def buy_coin(update, context):
     user_id = update.effective_user.id
-    await update.callback_query.message.reply_text("Buy Coin button pressed")
+    await update.message.reply_text("Buy Coin button pressed")
 
 async def trades(update, context):
     user_id = update.effective_user.id
-    await update.callback_query.message.reply_text("Trades button pressed")
+    await update.message.reply_text("Trades button pressed")
 
 async def sell_coin(update, context):
     user_id = update.effective_user.id
-    await update.callback_query.message.reply_text("Sell Coin button pressed")
+    await update.message.reply_text("Sell Coin button pressed")
 
 async def help_command(update, context):
     user_id = update.effective_user.id
-    await update.callback_query.message.reply_text("Help button pressed")
+    await update.message.reply_text("Help button pressed")
 
 async def about(update, context):
     user_id = update.effective_user.id
-    await update.callback_query.message.reply_text("About button pressed")
+    await update.message.reply_text("About button pressed")
+
+async def send_sol(update, context):
+    user_id = update.effective_user.id
+    await update.message.reply_text("About button pressed")
 
 async def start(update, context):
     """
@@ -76,8 +81,7 @@ async def menu_handler(update, context):
         await wallet_info(update, context)
 
     elif query.data == "main_send_sol":
-        await query.message.reply_text("Enter the amount of SOL to send:")
-        return SEND_SOL_AMOUNT
+        await settings(update, context)
 
     elif query.data == "main_add_funds":
         from handlers.wallet_handler import add_funds

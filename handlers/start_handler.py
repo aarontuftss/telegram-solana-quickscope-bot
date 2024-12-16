@@ -66,10 +66,9 @@ async def start(update, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # await update.message.reply_text(message + default_message, reply_markup=reply_markup, parse_mode="Markdown", photo='https://pbs.twimg.com/profile_banners/1868409913786994688/1734316985/1080x360')
     await context.bot.send_photo(
         chat_id=chat_id,
-        photo='https://pbs.twimg.com/profile_banners/1868409913786994688/1734316985/1080x360',
+        photo='https://ezzsedfstvphracdawzp.supabase.co/storage/v1/object/public/assets/600x200.webp',
         caption=message,
         reply_markup=reply_markup,
         parse_mode="Markdown"

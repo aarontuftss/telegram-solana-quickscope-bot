@@ -11,6 +11,8 @@ from supabase import create_client
 from dotenv import load_dotenv
 from cachetools import TTLCache
 
+from services.user_config_service import create_user_config
+
 # Define the TTL cache (maxsize=100, ttl=3600 seconds = 1 hour)
 cache = TTLCache(maxsize=100, ttl=3600)
 
@@ -63,7 +65,8 @@ def get_wallet_info(user_id):
     # Fetch the wallet details from the database
     result = supabase.table("Wallets").select("public_key").eq("user_id", user_id).execute()
     if not result.data:
-        return None
+        result = create_wallet(user_id)
+        create_user_config(user_id)
 
     # Extract the public key
     public_key_str = result.data[0]["public_key"]

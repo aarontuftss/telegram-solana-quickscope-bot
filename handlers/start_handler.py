@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from handlers.wallet_handler import trades
-from services.wallet_service import create_wallet
+from services.wallet_service import create_wallet, get_wallet_info
 from services.user_config_service import create_user_config
 from telegram import ForceReply
 
@@ -44,17 +44,11 @@ async def start(update, context):
     """
     context.user_data.clear()
     user_id = update.effective_user.id
-    username = update.effective_user.username or "User"
 
     # Check and create wallet if it doesn't exist
-    wallet = create_wallet(user_id)
-    message = ''
-    default_message = '... some stuff about the bot + header image'
-    if wallet:
-        create_user_config(user_id)
-        message = f"Welcome, {username}! \n Your wallet has been created:\n Public Key: `{wallet['public_key']}` \n"
-    else:
-        message = f"Welcome back, {username}! \n Your wallet already exists. \n"
+    wallet = get_wallet_info(user_id)
+    chat_id = update.effective_chat.id
+    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste any ticker, contract address, or url to view the latest information & quick buy \n \n Or... select an option below: \n"
 
     # Display menu buttons
     keyboard = [
@@ -72,8 +66,14 @@ async def start(update, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(message + default_message, reply_markup=reply_markup, parse_mode="Markdown")
-
+    # await update.message.reply_text(message + default_message, reply_markup=reply_markup, parse_mode="Markdown", photo='https://pbs.twimg.com/profile_banners/1868409913786994688/1734316985/1080x360')
+    await context.bot.send_photo(
+        chat_id=chat_id,
+        photo='https://pbs.twimg.com/profile_banners/1868409913786994688/1734316985/1080x360',
+        caption=message,
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
 async def menu_handler(update, context):
     """
     Handles button clicks from the main menu.

@@ -11,15 +11,19 @@ from supabase import create_client
 from dotenv import load_dotenv
 from cachetools import TTLCache
 
+import requests
+
 from services.user_config_service import create_user_config
 
 # Define the TTL cache (maxsize=100, ttl=3600 seconds = 1 hour)
-cache = TTLCache(maxsize=100, ttl=3600)
+cache = TTLCache(maxsize=100, ttl=900)
 
 load_dotenv()
 
 HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")  # Store your Helius API key in an environment variable
 HELIUS_API_URL = "https://api.helius.xyz/v0/addresses/{address}/transactions/"
+
+SOLANA_FM_TRANSACTIONS_URL = "https://api.solana.fm/v0/accounts/{address}/transfers"
 
 
 
@@ -106,71 +110,76 @@ def get_wallet_public_key(user_id):
     if result.data:
         return result.data[0]["public_key"]
     return None
-    
-async def fetch_trades(public_key, offset, limit):
-    try:
 
-        # Generate a unique cache key
-        cache_key = f"{public_key}-{offset}-{limit}"
+async def fetch_trades(public_key, page=1, limit=10):
+    """
+    Fetch trades for a public key using Solana.fm API.
+
+    Args:
+        public_key (str): The public key to fetch transactions for.
+        page (int): The page number for pagination.
+        limit (int): The number of transactions to fetch per page.
+
+    Returns:
+        tuple: A tuple containing the transactions and the total count.
+    """
+    try:
+        # # Generate a unique cache key
+        cache_key = f"{public_key}-page-{page}-limit-{limit}"
         
-        # Check if the result is already cached
+        # # Check if the result is already cached
         if cache_key in cache:
             return cache[cache_key]
 
-        url = HELIUS_API_URL.format(address=public_key)
-        params = {"api-key": HELIUS_API_KEY}
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, params=params)
-            if response.status_code != 200:
-                raise Exception(f"Helius API returned {response.status_code}: {response.text}")
+        # Construct the API request URL
+        url = SOLANA_FM_TRANSACTIONS_URL.format(address=public_key)
 
-            # Parse the response
-            data = response.json()
-            total_count = len(data)
-            paginated_data = data[offset:offset + limit]
+        # Set up request parameters for pagination
+        params = {"page": page, "limit": limit}
 
-            transactions = []
-            for tx in paginated_data:
-                timestamp = tx.get("timestamp")
-                fee = tx.get("fee", 0) / 1e9  # Convert lamports to SOL
-                date = (
-                    datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                    if timestamp
-                    else "Unknown"
-                )
+        # Make the request to Solana.fm API
+        response = requests.get(url, params=params)
+        # Check for a successful response
+        if response.status_code != 200:
+            raise Exception(f"Solana.fm API returned {response.status_code}: {response.text}")
 
-                # Process native transfers
-                native_transfers = [
-                    {
-                        "from": transfer.get("fromUserAccount", "Unknown"),
-                        "to": transfer.get("toUserAccount", "Unknown"),
-                        "amount": transfer.get("amount", 0) / 1e9  # Convert lamports to SOL
-                    }
-                    for transfer in tx.get("nativeTransfers", [])
-                ]
+        # Parse the response
+        data = response.json()
+        total_pages = data['pagination']['totalPages']
+        transactions_data = data['results']
+        transactions = []
+        for tx in transactions_data:
+            fee_object = tx['data'][0]
+            payment_object = tx['data'][1]
+            if not fee_object or not payment_object:
+                continue
+            timestamp = payment_object.get("timestamp")
+            fee = fee_object.get("amount", 0) / 1e9  # Convert lamports to SOL
+            date = (
+                datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                if timestamp
+                else "Unknown"
+            )
 
-                # Process token transfers
-                token_transfers = [
-                    {
-                        "token": transfer.get("mint", "Unknown"),
-                        "from": transfer.get("fromUserAccount", "Unknown"),
-                        "to": transfer.get("toUserAccount", "Unknown"),
-                        "amount": transfer.get("tokenAmount", {}).get("amount", 0) /
-                                (10 ** transfer.get("tokenAmount", {}).get("decimals", 0))
-                    }
-                    for transfer in tx.get("tokenTransfers", [])
-                ]
+            transfer_obj = {
+                "from": payment_object.get("source", "Unknown"),
+                "to": payment_object.get("destination", "Unknown"),
+                "amount": payment_object.get("amount", 0) / 1e9,  # Convert lamports to SOL
+                'token': payment_object.get("token", "SOL")
+            }
 
-                # Only include native transfers or token transfers, not both
-                transactions.append({
-                    "date": date,
-                    "fee": f"{fee:.9f}",
-                    "native_transfers": native_transfers if native_transfers else None,
-                    "token_transfers": token_transfers if not native_transfers and token_transfers else None,
-                })
-            cache[cache_key] = (transactions, total_count)
-            return transactions, total_count
+            # Only include native transfers or token transfers, not both
+            transactions.append({
+                "date": date,
+                "fee": f"{fee:.9f}",
+                'transfer_obj': transfer_obj
+            })
+
+        # Cache the result
+        cache[cache_key] = (transactions, total_pages)
+        return transactions, total_pages
 
     except Exception as e:
-        print(f"Error fetching transactions from Helius: {e}")
+        print(f"Error fetching transactions from Solana.fm: {e}")
         return [], 0
+

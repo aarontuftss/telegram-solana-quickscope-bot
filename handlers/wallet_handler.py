@@ -24,14 +24,13 @@ async def trades(update, context):
         return
 
     # Fetch the first page of transactions
-    transactions, total_count = await fetch_trades(public_key, 0, PAGE_SIZE)
+    transactions, total_pages = await fetch_trades(public_key, 1, PAGE_SIZE)
     if not transactions:
         await func("No transactions found for this wallet.")
         return
 
     # Display transactions
-    total_pages = ceil(total_count / PAGE_SIZE)
-    await send_paginated_trades(update, context, transactions, public_key, 0, total_pages, loading_message)
+    await send_paginated_trades(update, context, transactions, public_key, 1, total_pages, loading_message)
 
 async def send_paginated_trades(update, context, transactions, user_wallet, page, total_pages, loading_message):
     """Send a paginated message displaying trades with color-coded logic."""
@@ -39,46 +38,31 @@ async def send_paginated_trades(update, context, transactions, user_wallet, page
 
     
     # Start building the message
-    message = f"Page {page + 1} of {total_pages}:\n\n"
+    message = f"Page {page} of {total_pages}:\n\n"
     
     for tx in transactions:
         # Native Transfers
-        if tx.get("native_transfers"):
-            transfer = tx["native_transfers"][0]  # Assume one primary transfer per transaction
+        if tx.get("transfer_obj"):
+            transfer = tx["transfer_obj"]  # Assume one primary transfer per transaction
             amount = float(transfer["amount"])
             color = "🟥" if transfer["from"] == user_wallet else "🟩"  # Red for leaving, green for entering
-            amount_display = f"{color} {abs(amount):.9f} SOL"
+            amount_display = f"{color} {abs(amount):.9f} {transfer['token']}"
 
             message += (
                 f"**Date:** {tx['date']}\n"
                 f"**From:** `{transfer['from']}`\n"
                 f"**To:** `{transfer['to']}`\n"
                 f"**Amount:** {amount_display}\n"
-                f"**Fee:** {tx['fee']} SOL\n\n"
-            )
-
-        # Token Transfers
-        elif tx.get("token_transfers"):
-            transfer = tx["token_transfers"][0]  # Assume one primary transfer per transaction
-            amount = float(transfer["amount"])
-            color = "🟥" if transfer["from"] == user_wallet else "🟩"  # Red for selling, green for buying
-            amount_display = f"{color} {amount:.9f} {transfer['token']}"
-
-            message += (
-                f"**Date:** {tx['date']}\n"
-                f"**From:** `{transfer['from']}`\n"
-                f"**To:** `{transfer['to']}`\n"
-                f"**Amount:** {amount_display}\n"
-                f"**Fee:** {tx['fee']} SOL\n\n"
+                f"**Fee:** {tx['fee']} SOL\n\n" # UPDATE WITH SPECIFIED FEE TYPE
             )
 
     # Pagination buttons
     buttons = []
-    if page > 0:
+    if page > 1:
         buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"trades_page_{page - 1}"))
-    if page < total_pages - 1:
+    if page < total_pages:
         buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"trades_page_{page + 1}"))
-    buttons.append(InlineKeyboardButton("🗑️ Clear", callback_data="trades_delete_message"))
+    buttons.append(InlineKeyboardButton("Close", callback_data="trades_delete_message"))
 
     reply_markup = InlineKeyboardMarkup([buttons])
     # await func(message, reply_markup=reply_markup, parse_mode="Markdown")
@@ -102,8 +86,7 @@ async def trades_callback_handler(update, context):
             return
 
         # Fetch transactions for the requested page
-        transactions, total_count = await fetch_trades(public_key, page * PAGE_SIZE, PAGE_SIZE)
-        total_pages = ceil(total_count / PAGE_SIZE)
+        transactions, total_pages = await fetch_trades(public_key, page, PAGE_SIZE)
 
         # Update the message with the new page of transactions
         await send_paginated_trades(query, context, transactions, public_key, page, total_pages, loading_message)

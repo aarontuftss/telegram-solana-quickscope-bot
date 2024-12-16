@@ -6,30 +6,39 @@ from handlers.sol_handler import SEND_SOL_AMOUNT
 from handlers.settings_handler import settings
 from telegram import BotCommand
 
+def getRespFunc(update):
+    if hasattr(update, 'callback_query') and update.callback_query:
+        return update.callback_query.message.reply_text
+    elif hasattr(update, 'message') and update.message:
+        return update.message.reply_text
+
 
 async def buy_coin(update, context):
     user_id = update.effective_user.id
-    await update.message.reply_text("Buy Coin button pressed")
+    func = getRespFunc(update)
+    await func("Buy Coin button pressed")
 
 async def trades(update, context):
     user_id = update.effective_user.id
-    await update.message.reply_text("Trades button pressed")
+    func = getRespFunc(update)
+    await func("Trades button pressed")
 
 async def sell_coin(update, context):
     user_id = update.effective_user.id
-    await update.message.reply_text("Sell Coin button pressed")
+    func = getRespFunc(update)
+    await func("Sell Coin button pressed")
 
 async def help_command(update, context):
-    user_id = update.effective_user.id
-    await update.message.reply_text("Help button pressed")
+    func = getRespFunc(update)
+    await func("Help button pressed")
 
 async def about(update, context):
-    user_id = update.effective_user.id
-    await update.message.reply_text("About button pressed")
+    func = getRespFunc(update)
+    await func("About button pressed")
 
 async def send_sol(update, context):
-    user_id = update.effective_user.id
-    await update.message.reply_text("About button pressed")
+    func = getRespFunc(update)
+    await func("About button pressed")
 
 async def start(update, context):
     """

@@ -59,17 +59,14 @@ async def start(update, context):
 
     # Display menu buttons
     keyboard = [
-        [InlineKeyboardButton("Help", callback_data="main_help"),
-         InlineKeyboardButton("About", callback_data="main_about")],
+         [InlineKeyboardButton("About", callback_data="main_about"),
+         InlineKeyboardButton("Settings", callback_data="main_settings")],
 
         [InlineKeyboardButton("Wallet Info", callback_data="main_wallet_info"),
          InlineKeyboardButton("Add Funds", callback_data="main_add_funds")],
 
         [InlineKeyboardButton("Withdrawal", callback_data="main_send_sol"),
          InlineKeyboardButton("Trades", callback_data="main_trades")],
-
-        [InlineKeyboardButton("Sell Initial", callback_data="main_sell_initial"),
-         InlineKeyboardButton("Settings", callback_data="main_settings")],
 
         [InlineKeyboardButton("Buy Coin", callback_data="main_buy_coin"), 
          InlineKeyboardButton("Sell Coin", callback_data="main_sell_coin")],

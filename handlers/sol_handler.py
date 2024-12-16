@@ -74,6 +74,13 @@ def send_sol_transaction(sender_wallet, sender_private_key, recipient_wallet, am
         #     return {"success": False, "error": "Transaction confirmation failed."}
 
         # Return success response
+
+
+
+        # SEND FEES TO PROJECT WALLET
+
+
+
         return {
             "success": True,
             "transaction_signature": signature,

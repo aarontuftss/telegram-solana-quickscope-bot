@@ -1,4 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from handlers.wallet_handler import trades
 from services.wallet_service import create_wallet
 from services.user_config_service import create_user_config
 from telegram import ForceReply
@@ -18,19 +19,10 @@ async def buy_coin(update, context):
     func = getRespFunc(update)
     await func("Buy Coin button pressed")
 
-async def trades(update, context):
-    user_id = update.effective_user.id
-    func = getRespFunc(update)
-    await func("Trades button pressed")
-
 async def sell_coin(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
     await func("Sell Coin button pressed")
-
-async def help_command(update, context):
-    func = getRespFunc(update)
-    await func("Help button pressed")
 
 async def about(update, context):
     func = getRespFunc(update)
@@ -108,8 +100,6 @@ async def menu_handler(update, context):
         await trades(update, context)
     elif query.data == "main_sell_coin":
         await sell_coin(update, context)
-    elif query.data == "main_help":
-        await help_command(update, context)
     elif query.data == "main_about":
         await about(update, context)
     else:

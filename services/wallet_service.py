@@ -78,3 +78,23 @@ def generate_qr_code(data):
     img.save(output, "PNG")
     output.seek(0)
     return output
+
+
+
+def get_wallet_public_key(user_id):
+    """Fetch the public key for a user's wallet from Supabase."""
+    result = supabase.table("Wallets").select("public_key").eq("user_id", user_id).execute()
+    if result.data:
+        return result.data[0]["public_key"]
+    return None
+
+def fetch_trades(public_key, offset, limit):
+    """Fetch a paginated list of transactions for the wallet."""
+    # Placeholder implementation
+    # Replace with Solana API or relevant data source for fetching transactions
+    transactions = [
+        {"tx_id": f"Tx{offset + i + 1}", "amount": 1.23, "date": "2024-12-16"}
+        for i in range(limit)
+    ]
+    total_count = 50  # Replace with actual count from the data source
+    return transactions, total_count

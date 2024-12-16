@@ -1,6 +1,6 @@
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
-from handlers.start_handler import about, buy_coin, help_command, sell_coin, send_sol, start, menu_handler, trades
-from handlers.wallet_handler import wallet_info, add_funds
+from handlers.start_handler import about, buy_coin, sell_coin, send_sol, start, menu_handler, trades
+from handlers.wallet_handler import trades_callback_handler, wallet_info, add_funds
 from telegram import BotCommand
 
 from handlers.settings_handler import settings, handle_settings_buttons
@@ -34,6 +34,7 @@ def main():
     application.add_handler(CommandHandler("settings", settings))
     application.add_handler(CallbackQueryHandler(menu_handler, pattern="main_"))
     application.add_handler(CallbackQueryHandler(handle_settings_buttons, pattern="settings_"))
+    application.add_handler(CallbackQueryHandler(trades_callback_handler, pattern="trades_"))
     application.add_handler(MessageHandler(filters.REPLY & filters.TEXT, capture_user_reply))  # Capture replies
 
 

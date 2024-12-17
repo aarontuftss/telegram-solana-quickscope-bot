@@ -9,15 +9,23 @@ from telegram import ForceReply
 from handlers.settings_handler import settings
 from telegram import BotCommand
 
-async def buy_coin(update, context):
+async def start_transaction(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
-    await func("Buy Coin button pressed")
+    await func("🚀 Paste any ticker, contract address, or url to start a transaction")
 
-async def sell_coin(update, context):
+async def alerts(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
-    await func("Sell Coin button pressed")
+    await func("Link to main telegram community")
+
+async def refer(update, context):
+    user_id = update.effective_user.id
+    func = getRespFunc(update)
+    bot_url = "https://t.me/thequickscope_bot" 
+    message = f"Thank you for your support 🖤\n\n(tap blow to copy)\n`{bot_url}`"
+    await func(message, parse_mode="Markdown")
+
 
 async def send_sol(update, context):
     context.user_data.clear()
@@ -39,7 +47,7 @@ async def start(update, context):
     # Check and create wallet if it doesn't exist
     wallet = get_wallet_info(user_id)
     chat_id = update.effective_chat.id
-    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste any ticker, contract address, or url to view the latest information & quick buy \n \n Or... select an option below: \n"
+    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste any ticker, contract address, or url to view the latest information & quick buy\n"
 
     # Display menu buttons
     keyboard = [
@@ -52,8 +60,11 @@ async def start(update, context):
         [InlineKeyboardButton("💸 Withdraw / Send", callback_data="main_send_sol"),
          InlineKeyboardButton("↔️ Trades", callback_data="main_trades")],
 
+        [InlineKeyboardButton("📲 Share", callback_data="main_refer"),
+         InlineKeyboardButton("📈 Trending", url='https://gmgn.ai/?chain=sol&tab=trending')],
+
         [InlineKeyboardButton("🟢 Buy Coin", callback_data="main_buy_coin"), 
-         InlineKeyboardButton("🔴 Sell Coin", callback_data="main_sell_coin")],
+         InlineKeyboardButton("🔴 Sell Coin", callback_data="main_sell_coin")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -85,12 +96,16 @@ async def menu_handler(update, context):
     elif query.data == "main_settings":
         await settings(update, context)
     elif query.data == "main_buy_coin":
-        await buy_coin(update, context)
+        await start_transaction(update, context)
     elif query.data == "main_trades":
         await trades(update, context)
     elif query.data == "main_sell_coin":
-        await sell_coin(update, context)
+        await start_transaction(update, context)
     elif query.data == "main_about":
         await about(update, context)
+    elif query.data == "main_alerts":
+        await alerts(update, context)
+    elif query.data == "main_refer":
+        await refer(update, context)
     else:
         print("Invalid button pressed", query.data)

@@ -1,16 +1,11 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from handlers.utils import getRespFunc
 from services.wallet_service import fetch_trades, get_wallet_info, generate_qr_code, get_wallet_public_key
 
 from math import ceil
 
 
 PAGE_SIZE = 5  # Number of transactions per page
-
-def getRespFunc(update):
-    if hasattr(update, 'callback_query') and update.callback_query:
-        return update.callback_query.message.reply_text
-    elif hasattr(update, 'message') and update.message:
-        return update.message.reply_text
 
 async def trades(update, context):
     user_id = update.effective_user.id

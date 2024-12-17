@@ -1,4 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from handlers.about_handler import about
+from handlers.utils import getRespFunc
 from handlers.wallet_handler import trades
 from services.wallet_service import create_wallet, get_wallet_info
 from services.user_config_service import create_user_config
@@ -6,13 +8,6 @@ from telegram import ForceReply
 
 from handlers.settings_handler import settings
 from telegram import BotCommand
-
-def getRespFunc(update):
-    if hasattr(update, 'callback_query') and update.callback_query:
-        return update.callback_query.message.reply_text
-    elif hasattr(update, 'message') and update.message:
-        return update.message.reply_text
-
 
 async def buy_coin(update, context):
     user_id = update.effective_user.id
@@ -23,10 +18,6 @@ async def sell_coin(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
     await func("Sell Coin button pressed")
-
-async def about(update, context):
-    func = getRespFunc(update)
-    await func("About button pressed")
 
 async def send_sol(update, context):
     context.user_data.clear()

@@ -1,4 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from handlers.utils import getRespFunc
 from services.user_config_service import fetch_user_config, update_user_config
 from telegram import ForceReply
 
@@ -46,15 +47,37 @@ async def settings(update, context):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Send the settings menu to the user
-    # await update.callback_query.message.reply_text("⚙️ Settings Menu ⚙️", reply_markup=reply_markup)
-    if hasattr(update, 'callback_query') and update.callback_query:
-        # Triggered by a button press
-        await update.callback_query.message.reply_text("⚙️ Settings Menu ⚙️", reply_markup=reply_markup)
-    elif hasattr(update, 'message') and update.message:
-        # Triggered by a command
-        await update.message.reply_text("⚙️ Settings Menu ⚙️", reply_markup=reply_markup)
+    detailed_message = """
+⚙️ Settings Menu ⚙️
 
+
+- Sell Initial*: Automatically sell initial tokens when a trade begins.
+
+- Buy Left*: Shortcut for the amount to buy on the left button when starting a transaction.
+
+- Buy Right*: Shortcut for the amount to buy on the right button when starting a transaction.
+
+- Sell Left*: Shortcut for the percentage of tokens to sell when starting a transaction.
+
+- Sell Right*: Shortcut for the percentage of tokens to sell when starting a transaction.
+
+- Slippage Buy*: Maximum slippage allowed when buying.
+
+- Slippage Sell*: Maximum slippage allowed when selling.
+
+- Max Price Impact*: Maximum allowable price impact for trades.
+
+- MEV Protect*: Prevents MEV Bot manipulation during transactions.
+
+- Priority*: Sets the transaction priority.
+
+
+For assistance or feedback, [Contact Us](https://twitter.com/qsbot0).
+"""
+
+
+    func = getRespFunc(update)
+    await func(detailed_message, reply_markup=reply_markup, parse_mode="Markdown", disable_web_page_preview=True)
 
 
 async def handle_settings_buttons(update, context):

@@ -30,7 +30,7 @@ Welcome to QuickScope Bot! Here's everything you need to know about the app:
 - Specify the amount of tokens you wish to sell.
 - Confirm the transaction and receive the corresponding SOL or equivalent.
 
-** You can also paste a ticker, contract address, or URL to view the latest information and access quick buy / sell options.
+-- You can also paste a ticker, contract address, or URL to view the latest information and access quick buy / sell options.
 
 
 ↔️ *Trades*:
@@ -43,6 +43,8 @@ Welcome to QuickScope Bot! Here's everything you need to know about the app:
 - We offer a lower fee to help you save on trading costs.
 - This fee helps us maintain the platform and provide fast, reliable services.
 
+If you have any questions or feedback please [Contact Us](https://twitter.com/qsbot0).
+
 Happy trading! 🚀
     """
 
@@ -53,7 +55,7 @@ Happy trading! 🚀
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     # Send the detailed response with the Close button
-    await func(detailed_response, reply_markup=reply_markup)
+    await func(detailed_response, reply_markup=reply_markup, parse_mode="Markdown", disable_web_page_preview=False)
 
 
 async def about_button_handler(update, context):

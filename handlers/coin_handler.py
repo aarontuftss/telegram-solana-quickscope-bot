@@ -1,56 +1,116 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, ForceReply
 from telegram.ext import ContextTypes
+from solana.rpc.api import Client
+from solders.pubkey import Pubkey
 from handlers.utils import getRespFunc
+from services.coin_service import format_number, get_published_solana_coin_info, get_pump_fun_coin_info
+from services.user_config_service import fetch_user_config
+import requests
+from dotenv import load_dotenv
+import os
 
-# Function to get user-configured preset amounts
-def get_user_config_amount(action):
-    """Fetch user-configured amounts (stubbed for now)."""
-    presets = {
-        "buy_left": 1.0,  # Example amount for "Buy Left"
-        "buy_right": 2.0,
-        "sell_left": 1.5,
-        "sell_right": 2.5
-    }
-    return presets.get(action, 1.0)
+# Load environment variables
+load_dotenv()
+SOLANA_RPC_URL = os.getenv("SOLANA_RPC_URL")
+
+client = Client(SOLANA_RPC_URL)
+
 
 # Function to fetch coin information
 def fetch_coin_info(user_input):
-    """Match user input to a coin ticker, URL, or contract address."""
-    if user_input.lower() in ["btc", "eth", "sol"]:
-        return {"name": user_input.upper(), "price": "100.00", "description": "Sample coin information."}
-    elif "http" in user_input or "t.me" in user_input:
-        return {"name": "URL Coin", "price": "50.00", "description": "Fetched from URL."}
-    elif len(user_input) == 44:  # Contract address format
-        return {"name": "Contract Coin", "price": "75.00", "description": "Matched contract address."}
-    return None
+    """Match user input to a url or contract address."""
+
+    # check if URL & parse token address
+    if 'dexscreener.com/solana' in user_input:
+        user_input = user_input.split("/")[-1]
+    elif 'pump.fun/coin' in user_input:
+        user_input = user_input.split("/")[-1]
+    elif 'birdeye.so/token' in user_input:
+        user_input = user_input.split("/")[-1].split("?")[0]
+
+    # Check if the input is a 44-character contract address
+    if len(user_input) == 44:
+        return get_published_solana_coin_info(user_input)
+
+    # Default fallback
+    return {"error": "Invalid input. Please provide a valid contract address."}
+
 
 # Handle incoming coin information
 async def handle_coin_info(update, context):
     user_input = update.message.text
     func = getRespFunc(update)
+    loading_message = await func("🔄 Loading information, please wait...")
+
+    user_id = update.effective_user.id
+    config = fetch_user_config(user_id)
 
     coin_info = fetch_coin_info(user_input)
+    if coin_info.get("error"):
+        await loading_message.delete()
+        await func(f"❌ {coin_info['error']}")
+        return
     if coin_info:
         # Store state in context.user_data
         context.user_data['coin'] = coin_info['name']
+        context.user_data['coin_info'] = coin_info
         context.user_data['action'] = None
         context.user_data['amount'] = None
 
+
+        # Round and format all values
+        price = format_number(coin_info.get('price'))
+        price_change_5m = format_number(coin_info.get('price_change_5m'))
+        price_change_1h = format_number(coin_info.get('price_change_1h'))
+        price_change_6h = format_number(coin_info.get('price_change_6h'))
+        price_change_24h = format_number(coin_info.get('price_change_24h'))
+        market_cap = format_number(coin_info.get('market_cap'))
+
         # Generate buy/sell buttons
         keyboard = [
-            [InlineKeyboardButton(f"Buy {get_user_config_amount('buy_left')} SOL", callback_data="buy_left"),
+            [InlineKeyboardButton(f"Buy {config.get('buy_left')} SOL", callback_data="buy_left"),
              InlineKeyboardButton("Buy Custom", callback_data="buy_custom"),
-             InlineKeyboardButton(f"Buy {get_user_config_amount('buy_right')} SOL", callback_data="buy_right")],
-            [InlineKeyboardButton(f"Sell {get_user_config_amount('sell_left')} SOL", callback_data="sell_left"),
+             InlineKeyboardButton(f"Buy {config.get('buy_right')} SOL", callback_data="buy_right")],
+            [InlineKeyboardButton(f"Sell {config.get('sell_left') * 100}%", callback_data="sell_left"),
              InlineKeyboardButton("Sell Custom", callback_data="sell_custom"),
-             InlineKeyboardButton(f"Sell {get_user_config_amount('sell_right')} SOL", callback_data="sell_right")],
+             InlineKeyboardButton(f"Sell {config.get('sell_right') * 100}%", callback_data="sell_right")],
             [InlineKeyboardButton("Close", callback_data="close")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message = f"🔎 *{coin_info['name']}*\n💰 Price: {coin_info['price']} SOL\nℹ️ {coin_info['description']}"
-        await func(message, reply_markup=reply_markup, parse_mode="Markdown")
+        # message = f"🔎 *{coin_info['name']}*\n💰 Price: {coin_info['price']} SOL\nℹ️ {coin_info['description']}"
+        # await func(message, reply_markup=reply_markup, parse_mode="Markdown")
+            # Create a pretty display message
+        message = (
+            f"🔎 *{coin_info['name']}* (`{coin_info['symbol']}`)\n"
+            f"--------------------------------\n"
+            f"💰 *Price*: {price} USD\n"
+            f"📈 *Market Cap*: ${market_cap}\n"
+            f"--------------------------------\n"
+            f"⏳ *Price Changes*:\n"
+            f"   - 5m: `{price_change_5m} %`\n"
+            f"   - 1h: `{price_change_1h} %`\n"
+            f"   - 6h: `{price_change_6h} %`\n"
+            f"   - 24h: `{price_change_24h} %`\n"
+            f"--------------------------------\n"
+            f"🏷️ *Mint Address*: `{coin_info['mint_address']}`\n"
+            f"--------------------------------\n"
+            f"📝 *Description*: {coin_info['description']}\n"
+            f"💻 [DEXSCREENER](https://dexscreener.com/solana/{coin_info['mint_address']})"
+        )
+
+        if coin_info['mint_address'].endswith("pump"):
+            message += f" | [PUMP.FUN](https://pump.fun/coin/{coin_info['mint_address']})"
+
+        await loading_message.delete()
+        # If there's an image URL, attach the image
+        if coin_info.get("image_url"):
+            await update.message.reply_photo(photo=coin_info['image_url'], caption=message, reply_markup=reply_markup, parse_mode="Markdown")
+        else:
+            await func(message, reply_markup=reply_markup, parse_mode="Markdown")
     else:
+        if loading_message: 
+            await loading_message.delete()
         await func("❌ Coin not recognized. Please try again.")
 
 # Handle button presses for buy/sell
@@ -70,10 +130,20 @@ async def handle_buy_sell(update, context):
         )
     else:
         # Preset buy/sell amount
-        preset_amount = get_user_config_amount(action)
+        user_id = update.effective_user.id
+        config = fetch_user_config(user_id)
+        preset_amount = config.get(action)
         context.user_data['amount'] = preset_amount
+
+        # generate two diff strings for buy and sell. sell values should be converted to percentage
+        if action.startswith("sell"):
+            amount_str = f"Sell {preset_amount * 100}%"
+        else:
+            amount_str = f"Buy {preset_amount} SOL"
+
+
         await func(
-            f"Please confirm: {action.replace('_', ' ').title()} {preset_amount} SOL?",
+            f"Please confirm: {amount_str}?",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Confirm", callback_data="confirm"),
                  InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
@@ -92,8 +162,17 @@ async def capture_amount_reply(update, context):
             context.user_data['amount'] = amount
 
             action = context.user_data['action']
+
+
+            # generate two diff strings for buy and sell. sell values should be converted to percentage
+            if action.startswith("sell"):
+                amount_str = f"Sell {amount}%"
+            else:
+                amount_str = f"Buy {amount} SOL"
+
+
             await func(
-                f"Please confirm: {action.replace('_', ' ').title()} {amount} SOL?",
+                f"Please confirm: {amount_str}?",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("✅ Confirm", callback_data="confirm"),
                      InlineKeyboardButton("❌ Cancel", callback_data="cancel")]

@@ -12,7 +12,7 @@ from telegram import BotCommand
 async def start_transaction(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
-    await func("🚀 Paste any ticker, contract address, or url to start a transaction")
+    await func("Paste a contract address or a URL from pump.fun, Birdeye, or DEX Screener to start a transaction ⬇️")
 
 async def alerts(update, context):
     user_id = update.effective_user.id
@@ -47,7 +47,7 @@ async def start(update, context):
     # Check and create wallet if it doesn't exist
     wallet = get_wallet_info(user_id)
     chat_id = update.effective_chat.id
-    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste any ticker, contract address, or url to view the latest information & quick buy\n"
+    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste a contract address or a URL from pump.fun, Birdeye, or DEX Screener to start a transaction.\n"
 
     # Display menu buttons
     keyboard = [

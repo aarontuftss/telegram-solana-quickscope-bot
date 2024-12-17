@@ -21,17 +21,14 @@ Welcome to QuickScope Bot! Here's everything you need to know about the app:
 
 💸 *How to Buy and Sell*:
 1. **Buy Coin**:
-- Go to the *Main Menu* and select *🟢 Buy Coin*.
+- Paste a contract address or a URL from pump.fun, Birdeye, or DEX Screener into the chat to initiate a transaction.
 - Enter the amount of SOL or tokens you want to buy.
 - Confirm the transaction and check your updated wallet balance.
 
 2. **Sell Coin**:
-- From the *Main Menu*, select *🔴 Sell Coin*.
+- Paste a contract address or a URL from pump.fun, Birdeye, or DEX Screener into the chat to initiate a transaction.
 - Specify the amount of tokens you wish to sell.
 - Confirm the transaction and receive the corresponding SOL or equivalent.
-
--- You can also paste a ticker, contract address, or URL to view the latest information and access quick buy / sell options.
-
 
 ↔️ *Trades*:
 - View all your active and completed trades in the *Trades* section.

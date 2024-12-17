@@ -1,4 +1,5 @@
 from telegram import ForceReply
+from handlers.coin_handler import capture_amount_reply
 from handlers.sol_handler import send_sol_transaction
 from services.user_config_service import update_user_config
 from supabase import create_client, Client
@@ -29,6 +30,12 @@ async def capture_user_reply(update, context):
     if current_setting:
         await handle_settings_reply(update, context, user_id, current_setting)
         return
+    
+    current_action = context.user_data.get('action', None)
+    if current_action:
+        await capture_amount_reply(update, context)
+        return
+
 
     # Default response for unrecognized input
     await update.message.reply_text("No active operation. Please use a menu option or command.")

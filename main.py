@@ -1,14 +1,10 @@
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from handlers.about_handler import about_button_handler
+from handlers.coin_handler import close, handle_buy_sell, handle_coin_info, handle_confirmation
 from handlers.start_handler import about, send_sol, start, menu_handler, start_transaction, trades
 from handlers.wallet_handler import trades_callback_handler, wallet_info, add_funds
-from telegram import BotCommand
-
 from handlers.settings_handler import settings, handle_settings_buttons
 from handlers.user_reply import capture_user_reply
-
-import threading
-import time
 
 import os
 from dotenv import load_dotenv
@@ -40,10 +36,12 @@ def main():
     application.add_handler(MessageHandler(filters.REPLY & filters.TEXT, capture_user_reply))  # Capture replies
 
 
-    # Start a thread to print a message every second
-    # message_thread = threading.Thread(target=print_message)
-    # message_thread.daemon = True
-    # message_thread.start()
+    # new logic - Register handlers for coin purchase / sell flow
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coin_info))  # Default coin info
+    application.add_handler(CallbackQueryHandler(handle_buy_sell, pattern="^(buy|sell)_"))
+    application.add_handler(MessageHandler(filters.REPLY, capture_user_reply))  # Capture custom amount
+    application.add_handler(CallbackQueryHandler(handle_confirmation, pattern="^(confirm|cancel)$"))
+    application.add_handler(CallbackQueryHandler(close, pattern="close"))
 
     # Start polling
     application.run_polling()

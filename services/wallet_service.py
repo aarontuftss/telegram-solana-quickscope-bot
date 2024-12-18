@@ -28,12 +28,17 @@ SOLANA_FM_TRANSACTIONS_URL = "https://api.solana.fm/v0/accounts/{address}/transf
 SOLANA_FM_BALANCE_URL = "https://api.solana.fm/v1/tokens/{address}/token-accounts"
 
 
+SOL_TRACKER_API_URL = "https://data.solanatracker.io/wallet/{address}"
+
+
 
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+SOL_TRACKER_KEY = os.getenv("SOL_TRACKER_KEY")
+
 
 
 SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"  # Replace with "https://api.devnet.solana.com" for testing
@@ -114,73 +119,42 @@ def get_wallet_public_key(user_id):
 
 async def fetch_trades(public_key, page=1, limit=10):
     """
-    Fetch trades for a public key using Solana.fm API.
+    Fetch trades for a public key using SolanaTracker API.
 
     Args:
         public_key (str): The public key to fetch transactions for.
         page (int): The page number for pagination.
-        limit (int): The number of transactions to fetch per page.
+        limit (int): The number of items to fetch per page.
 
     Returns:
-        tuple: A tuple containing the transactions and the total count.
+        dict: A dictionary containing paginated trade data and total pages.
     """
     try:
-        # # Generate a unique cache key
-        cache_key = f"{public_key}-page-{page}-limit-{limit}"
-        
-        # # Check if the result is already cached
-        if cache_key in cache:
-            return cache[cache_key]
-
         # Construct the API request URL
-        url = SOLANA_FM_TRANSACTIONS_URL.format(address=public_key)
+        url = SOL_TRACKER_API_URL.format(address=public_key)
 
-        # Set up request parameters for pagination
-        params = {"page": page, "limit": limit}
-
-        # Make the request to Solana.fm API
-        response = requests.get(url, params=params)
-        # Check for a successful response
+        # Make the request to SolanaTracker API
+        response = requests.get(url, headers={"x-api-key": SOL_TRACKER_KEY})
         if response.status_code != 200:
-            raise Exception(f"Solana.fm API returned {response.status_code}: {response.text}")
+            raise Exception(f"SolanaTracker API returned {response.status_code}: {response.text}")
 
         # Parse the response
         data = response.json()
-        total_pages = data['pagination']['totalPages']
-        transactions_data = data['results']
-        transactions = []
-        for tx in transactions_data:
-            fee_object = tx['data'][0]
-            payment_object = tx['data'][1]
-            if not fee_object or not payment_object:
-                continue
-            timestamp = payment_object.get("timestamp")
-            fee = fee_object.get("amount", 0) / 1e9  # Convert lamports to SOL
-            date = (
-                datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                if timestamp
-                else "Unknown"
-            )
 
-            transfer_obj = {
-                "from": payment_object.get("source", "Unknown"),
-                "to": payment_object.get("destination", "Unknown"),
-                "amount": payment_object.get("amount", 0) / 1e9,  # Convert lamports to SOL
-                'token': payment_object.get("token", "SOL")
+        # Format the data for display
+        formatted_trades = [
+            {
+                "name": token["token"]["name"],
+                "symbol": token["token"]["symbol"],
+                "balance": f"{token['balance']:.9f} {token['token']['symbol']}",
+                "usd_value": f"${token['value']:.2f}",
+                "image": token["token"]["image"]
             }
+            for token in data['tokens']
+        ]
 
-            # Only include native transfers or token transfers, not both
-            transactions.append({
-                "date": date,
-                "fee": f"{fee:.9f}",
-                'transfer_obj': transfer_obj
-            })
-
-        # Cache the result
-        cache[cache_key] = (transactions, total_pages)
-        return transactions, total_pages
+        return formatted_trades
 
     except Exception as e:
-        print(f"Error fetching transactions from Solana.fm: {e}")
-        return [], 0
-
+        print(f"Error fetching trades from SolanaTracker: {e}")
+        return {"trades": [], "total_pages": 0}

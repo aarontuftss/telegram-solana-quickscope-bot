@@ -4,6 +4,7 @@ import httpx
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solana.rpc.api import Client
+from solana.rpc.types import TokenAccountOpts
 import base64
 import os
 from dotenv import load_dotenv
@@ -24,6 +25,7 @@ HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")  # Store your Helius API key in an 
 HELIUS_API_URL = "https://api.helius.xyz/v0/addresses/{address}/transactions/"
 
 SOLANA_FM_TRANSACTIONS_URL = "https://api.solana.fm/v0/accounts/{address}/transfers"
+SOLANA_FM_BALANCE_URL = "https://api.solana.fm/v1/tokens/{address}/token-accounts"
 
 
 
@@ -63,8 +65,6 @@ def get_wallet_info(user_id):
     """
     Retrieves wallet info and balance from the database and Solana blockchain.
     """
-    rpc_client = Client(SOLANA_RPC_URL)
-
 
     # Fetch the wallet details from the database
     result = supabase.table("Wallets").select("public_key").eq("user_id", user_id).execute()
@@ -76,13 +76,14 @@ def get_wallet_info(user_id):
     public_key_str = result.data[0]["public_key"]
     public_key = Pubkey.from_string(public_key_str)
 
-    # Fetch the wallet balance from Solana blockchain
-    response = rpc_client.get_balance(public_key)
-    balance_lamports = response.value
-    balance_sol = balance_lamports / 1e9  # Convert lamports to SOL
+    url = SOLANA_FM_BALANCE_URL.format(address=public_key)
+    response = requests.post(url, json={ "includeSolBalance": True })
+    response_json = response.json()
+    balance_sol = response_json['solBalance']
+    filtered_token_accounts = [token for token in response_json['tokenAccounts'] if token['info']['tokenAmount']['uiAmount'] > 0]
+    num_coins = len(filtered_token_accounts)
 
-    # Return wallet information and balance
-    return {"public_key": public_key, "balance": balance_sol}
+    return {"public_key": public_key, "balance": balance_sol, "num_coins": num_coins}
 
 
 def generate_qr_code(data):

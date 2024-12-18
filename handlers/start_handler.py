@@ -47,7 +47,14 @@ async def start(update, context):
     # Check and create wallet if it doesn't exist
     wallet = get_wallet_info(user_id)
     chat_id = update.effective_chat.id
-    message = f"Welcome to the Quickscope Bot! \n \nYour wallet address: \n `{wallet['public_key']}` (tap to copy) \n \nBalance: {wallet['balance']} SOL \n \nPaste a contract address or a URL from pump.fun, Birdeye, or DEX Screener to start a transaction.\n"
+    message = (
+        f"Welcome to the Quickscope Bot! \n"
+        f"---------------------------------------------\n\n"
+        f"`{wallet['public_key']}` (tap to copy) \n \n"
+        f"Balance: {wallet['balance']} SOL \n \nYou own {wallet['num_coins']} coins \n\n"
+        f"---------------------------------------------\n"
+        f"Paste a contract address or a URL from pump.fun, Birdeye, or DEX Screener to start a transaction.\n"
+        )
 
     # Display menu buttons
     keyboard = [
@@ -58,7 +65,7 @@ async def start(update, context):
          InlineKeyboardButton("Add Funds", callback_data="main_add_funds")],
 
         [InlineKeyboardButton("Withdraw / Send", callback_data="main_send_sol"),
-         InlineKeyboardButton("View Assets", callback_data="main_trades")],
+         InlineKeyboardButton("Your Coins", callback_data="main_trades")],
 
         [InlineKeyboardButton("Share", callback_data="main_refer"),
          InlineKeyboardButton("Trending", url='https://gmgn.ai/?chain=sol&tab=trending')],

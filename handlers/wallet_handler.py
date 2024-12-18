@@ -95,13 +95,25 @@ async def wallet_info(update: Update, context):
     user_id = update.effective_user.id
     wallet = get_wallet_info(user_id)
 
-    if not wallet:
-        await update.callback_query.message.reply_text("No wallet found. Use /start to create one.")
-        return
+    keyboard = [
+        
+        [InlineKeyboardButton("Your Coins", callback_data="main_trades")],
+        [InlineKeyboardButton("Export Private Keys", callback_data="main_export_keys"), InlineKeyboardButton("Close", callback_data="close")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    
+    message = (
+        "🔑 Your wallet information\n"
+        f"--------------------------------\n\n"
+        f"Public Key: `{wallet['public_key']}`\n\n"
+        f"Balance: {wallet['balance']} SOL\n\n"
+        f"# of Coins {wallet['num_coins']}\n"
+        f"--------------------------------\n\n"
+    )
 
     await update.callback_query.message.reply_text(
-        f"Public Key: `{wallet['public_key']}`\nBalance: {wallet['balance']} SOL",
-        parse_mode="Markdown"
+        message, reply_markup=reply_markup, parse_mode="Markdown"
     )
 
 async def add_funds(update: Update, context):
@@ -111,19 +123,21 @@ async def add_funds(update: Update, context):
     user_id = update.effective_user.id
     wallet = get_wallet_info(user_id)
 
-    if not wallet:
-        await update.callback_query.message.reply_text("No wallet found. Use /start to create one.")
-        return
-
     public_key = wallet['public_key']
-    moonpay_url = f"https://www.moonpay.com/buy?walletAddress={public_key}&currencyCode=SOL"
+    moonpay_url = f"https://www.moonpay.com/"
     qr_image = generate_qr_code(public_key)
 
-    await update.callback_query.message.reply_text(
-        f"Add funds to your wallet:\n\n"
-        f"Public Key: `{public_key}`\n\n"
-        f"[Buy with MoonPay]({moonpay_url})",
-        parse_mode="Markdown",
-        disable_web_page_preview=True
+    message = (
+        f"Public Key as a QR code ⬆️\n\n"
+        f"----------------------------\n\n"
+        f"Current balance: {wallet['balance']} SOL\n\n"
+        f"\n💰 Add funds to your wallet\n"
+        f"----------------------------\n\n"
+        f"Public Key: `{public_key}` (tap to copy)\n\n"
+        f"Or [Buy with MoonPay]({moonpay_url})\n\n"
     )
-    await update.callback_query.message.reply_photo(qr_image)
+
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="close")]])
+
+
+    await context.bot.send_photo(photo=qr_image, caption=message, parse_mode="Markdown", reply_markup=reply_markup ,chat_id=update.effective_chat.id)

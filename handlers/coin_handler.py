@@ -1,11 +1,8 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, ForceReply
-from telegram.ext import ContextTypes
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from solana.rpc.api import Client
-from solders.pubkey import Pubkey
 from handlers.utils import getRespFunc
-from services.coin_service import format_number, get_published_solana_coin_info, get_pump_fun_coin_info
+from services.coin_service import format_number, get_published_solana_coin_info, swap_coin_func
 from services.user_config_service import fetch_user_config
-import requests
 from dotenv import load_dotenv
 import os
 
@@ -187,12 +184,23 @@ async def handle_confirmation(update, context):
     await query.answer()
     await query.message.delete()
     func = getRespFunc(update)
+    loading_message = await func("🔄 Processing transaction, please wait...")
     action = context.user_data.get('action')
     amount = context.user_data.get('amount', 0)
+    coin_info = context.user_data['coin_info']
 
     if query.data == "confirm":
-        await func(f"✅ {action.replace('_', ' ').title()} confirmed with {amount} SOL.")
+        res = await swap_coin_func(update, context, amount, coin_info, action.startswith("sell"))
+
+        if res.get("error"):
+            await loading_message.delete()
+            await func(f"❌ Error processing transaction: {res['error']}")
+        else:
+            await loading_message.delete()
+            await func(f"✅ {res['message']}", parse_mode="Markdown", disable_web_page_preview=True)
+    
     else:
+        await loading_message.delete()
         await func("❌ Action canceled.")
 
 

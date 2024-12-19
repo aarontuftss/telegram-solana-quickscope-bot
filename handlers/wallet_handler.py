@@ -10,7 +10,7 @@ PAGE_SIZE = 5  # Number of transactions per page
 async def trades(update, context):
     user_id = update.effective_user.id
     func = getRespFunc(update)
-    loading_message = await func("🔄 Loading transactions, please wait...")
+    loading_message = await func("🔄 Loading your wallet, please wait...")
 
     # Get user's wallet public key
     public_key = get_wallet_public_key(user_id)

@@ -132,16 +132,17 @@ async def handle_buy_sell(update, context):
         config = fetch_user_config(user_id)
         preset_amount = config.get(action)
         context.user_data['amount'] = preset_amount
+        coin_info = context.user_data['coin_info']
 
         # generate two diff strings for buy and sell. sell values should be converted to percentage
         if action.startswith("sell"):
-            amount_str = f"Sell {preset_amount * 100}%"
+            amount_str = f"sell {preset_amount * 100}%"
         else:
-            amount_str = f"Buy {preset_amount} SOL"
+            amount_str = f"buy {preset_amount} SOL"
 
 
         await func(
-            f"Please confirm: {amount_str}?",
+            f"Please confirm {amount_str} of {coin_info['name']}?",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Confirm", callback_data="confirm"),
                  InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
@@ -204,9 +205,6 @@ async def handle_confirmation(update, context):
         await loading_message.delete()
         await func("❌ Action canceled.")
 
-
-    # Clear state after completion
-    context.user_data.clear()
 
 # Handle close button
 async def close(update, context):

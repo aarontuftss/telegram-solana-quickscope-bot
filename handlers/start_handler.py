@@ -51,7 +51,7 @@ async def start(update, context):
         f"Welcome to the Quickscope Bot! \n"
         f"---------------------------------------------\n\n"
         f"`{wallet['public_key']}` (tap to copy) \n \n"
-        f"Balance: {wallet['balance']} SOL \n \nYou own {wallet['num_coins']} coins \n\n"
+        f"Balance: {wallet['balance']} SOL \n \nYou own {wallet['num_coins']} coin(s) \n\n"
         f"---------------------------------------------\n"
         f"Paste a contract address or a URL from pump.fun, Birdeye, or DEX Screener to start a transaction.\n"
         )

@@ -1,1 +1,66 @@
 .env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+__pycache__
+*.py[cod]
+*$py.class
+
+# Local SQLite databases
+*.sqlite3
+*.db
+
+# Environment variables
+.env
+
+# Virtual environments
+venv/
+env/
+ENV/
+venv.bak/
+
+# Logs and debugging
+*.log
+logs/
+*.stackdump
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing and coverage
+.tox/
+.pytest_cache/
+.coverage
+*.cover
+coverage.xml
+htmlcov/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+
+# OS-specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Miscellaneous
+*.bak
+*.tmp
+*.old

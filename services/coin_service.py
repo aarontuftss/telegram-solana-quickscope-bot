@@ -8,6 +8,7 @@ import requests
 from dotenv import load_dotenv
 import os
 from supabase import create_client, Client as SupabaseClient
+from solana.rpc.types import TokenAccountOpts
 
 
 JUPITER_API_URL = "https://quote-api.jup.ag/v6"
@@ -107,6 +108,21 @@ async def swap_coin_func(update, context, amount, coin_info, is_sell):
     to_token = SOL_MINT_ADDRESS if is_sell else coin_info['mint_address']
 
     try:
+
+        # Check user's token balance for sales
+        if is_sell:
+            token_balance_response = client.get_token_accounts_by_owner(
+                sender_keypair.pubkey(), TokenAccountOpts(
+                    mint=Pubkey.from_string(coin_info["mint_address"])
+                )
+            )
+            token_balance_response = token_balance_response.value
+
+            if len(token_balance_response) == 0 or token_balance_response[0].account.lamports < 1:
+                return {
+                    'error': f"You do not have enough {coin_info['symbol']} to complete this trade. "
+                }
+
         swap_response = await solana_tracker.get_swap_instructions(
             from_token,  # From Token
             to_token,  # To Token
@@ -117,6 +133,22 @@ async def swap_coin_func(update, context, amount, coin_info, is_sell):
             True,  # Force legacy transaction for Jupiter
         )
 
+        # Check user's SOL balance for purchases
+        if not is_sell:
+            sol_balance = client.get_balance(sender_keypair.pubkey()).value
+
+            # Extract relevant data from swap response
+            amount_in = swap_response["rate"]["amountIn"]  # SOL required for the swap
+            platform_fee = swap_response["rate"]["platformFee"]  # Additional fee in lamports
+            base_decimals = swap_response["rate"]["baseCurrency"]["decimals"]  # SOL decimals
+
+            # Convert amountIn to lamports
+            required_lamports = int(amount_in * (10 ** base_decimals)) + platform_fee
+
+            if sol_balance < required_lamports:
+                required_sol = required_lamports / 1e9
+                return {'error': f"Insufficient funds. Check your balance or settings.\n\n Required: {required_sol} SOL."}
+
         # Define custom options
         custom_options = {
             "send_options": {"skip_preflight": True, "max_retries": 5},
@@ -126,11 +158,11 @@ async def swap_coin_func(update, context, amount, coin_info, is_sell):
             "commitment": "processed",
             "resend_interval": 1500,
             "confirmation_check_interval": 100,
-            "skip_confirmation_check": False,
+            "skip_confirmation_check": True,
         }
 
         txid = await solana_tracker.perform_swap(swap_response, options=custom_options)
-
+        
         return {
             'message': f"Transaction successful! Check your transaction here: "
                         f"[solscan.io](https://solscan.io/tx/{txid})"

@@ -26,7 +26,7 @@ async def trades(update, context):
 
     message = (
         "📈 Your Coins\n"
-        "--------------------------------\n\n"
+        "---------------------------------------\n\n"
     )
 
     for coin in coins:
@@ -34,8 +34,9 @@ async def trades(update, context):
             f"Name: {coin['name']}\n"
             f"Symbol: {coin['symbol']}\n"
             f"Balance: {coin['balance']}\n"
-            f"USD Value: {coin['usd_value']}\n"
-            "--------------------------------\n\n"
+            f"USD Value: {coin['usd_value']}\n\n"
+            f"Mint Address: `{coin['mint_address']}` (tap to copy)\n\n"
+            "---------------------------------------\n\n"
         )
 
     await loading_message.edit_text(message, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="close")]]), parse_mode="Markdown")

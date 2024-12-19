@@ -44,11 +44,19 @@ def send_sol_transaction(sender_wallet, sender_private_key, recipient_wallet, am
         except Exception as e:
             return {"success": False, "error": f"Invalid private key: {str(e)}"}
 
-        # Calculate the amount in lamports (1 SOL = 1e9 lamports)
+
+        # check sender balance & validate
+        sender_balance = rpc_client.get_balance(sender_pubkey).value
         lamports = int(amount * 1e9)
+
 
         ixns = [transfer(TransferParams(from_pubkey=sender_pubkey, to_pubkey=recipient_pubkey, lamports=lamports))]
         msg = Message(ixns, sender_pubkey)
+
+        fees = rpc_client.get_fee_for_message(msg).value or 0
+
+        if sender_balance < lamports + fees:
+            return {"success": False, "error": "Insufficient balance."}
 
         for i in range(5):
             try:
@@ -57,7 +65,6 @@ def send_sol_transaction(sender_wallet, sender_private_key, recipient_wallet, am
                 response = rpc_client.send_transaction(transaction)
                 break
             except Exception as e:
-                print(f"Failed to send transaction: {str(e)}")
                 if i == 4:
                     return {"success": False, "error": f"Failed to send transaction: {str(e)}"}
         
@@ -66,18 +73,15 @@ def send_sol_transaction(sender_wallet, sender_private_key, recipient_wallet, am
         if not signature:
             return {"success": False, "error": "Transaction failed. No signature received."}
 
-        # # Confirm the transaction
-        # confirmation = rpc_client.get_signature_statuses([signature])
+
+        # SEND FEES TO PROJECT WALLET
+
+        # Confirm the transaction
+        # confirmation = rpc_client.get_signature_statuses([signature]).value
         # print(confirmation, '***')
-        # confirmation = confirmation.value
         # if not confirmation or not confirmation[0]:
         #     return {"success": False, "error": "Transaction confirmation failed."}
 
-        # Return success response
-
-
-
-        # SEND FEES TO PROJECT WALLET
 
 
 

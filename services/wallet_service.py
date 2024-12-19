@@ -148,7 +148,8 @@ async def fetch_trades(public_key, page=1, limit=10):
                 "symbol": token["token"]["symbol"],
                 "balance": f"{token['balance']:.9f} {token['token']['symbol']}",
                 "usd_value": f"${token['value']:.2f}",
-                "image": token["token"]["image"]
+                "image": token["token"]["image"],
+                'mint_address': token['token']['mint'],
             }
             for token in data['tokens']
         ]

@@ -89,7 +89,14 @@ async def handle_send_sol(update, context, send_sol_stage):
                 )
 
                 if transaction_response['success']:
-                    await update.message.reply_text(f"Successfully sent {amount} SOL to {wallet_address}!")
+                    await update.message.reply_text((
+                        f"Successfully sent {amount} SOL to {wallet_address}! \n\n"
+                        f"------------------------\n"
+                        f"View on [Solscan](https://solscan.io/tx/{transaction_response['transaction_signature']})."
+                        ),
+                        parse_mode='Markdown',
+                        disable_web_page_preview=True
+                        )
                 else:
                     await update.message.reply_text(f"Transaction failed: {transaction_response['error']}")
             else:

@@ -120,9 +120,10 @@ async def handle_buy_sell(update, context):
     context.user_data['action'] = action
 
     if action in ["buy_custom", "sell_custom"]:
+        amnt_type = 'SOL' if action.startswith("buy") else '%'
         # Ask user for custom amount
         await query.message.reply_text(
-            "Please enter the amount in SOL:",
+            f"Please enter the amount in {amnt_type}:",
             reply_markup=ForceReply(selective=True)
         )
     else:
